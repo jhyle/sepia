@@ -1,3 +1,5 @@
+#include "bstrlib.h"
+
 #define SEPIA_OK 0
 #define SEPIA_ERROR_SOCKET 1
 #define SEPIA_ERROR_BIND   2
@@ -13,21 +15,18 @@
 struct sepia_request {
 	int status;
 	int socket;
-	size_t header_count;
-	char ** header_keys;
-	char ** header_values;
-	char * body;
-	char * buffer;
-	size_t buffer_size;
+	struct bstrList * headers;
+	bstring body;
 };
 
 void sepia_init();
 void sepia_mount(char *, void (* handler)(struct sepia_request *));
 int  sepia_start(char *, int);
 
-int  sepia_send_status(struct sepia_request *, char *, size_t);
-int  sepia_send_header(struct sepia_request *, char *, size_t, char *, size_t);
+int  sepia_send_status(struct sepia_request *, bstring);
+int  sepia_send_header(struct sepia_request *, bstring, bstring);
 void sepia_send_eohs  (struct sepia_request *);
 void sepia_send_data  (struct sepia_request *, void *, size_t);
+void sepia_send_string(struct sepia_request *, bstring);
 
 void sepia_print_request(struct sepia_request *);

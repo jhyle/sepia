@@ -20,7 +20,7 @@ struct sepia_request {
 };
 
 void sepia_init();
-void sepia_mount(char *, void (* handler)(struct sepia_request *));
+void sepia_mount(char *, char *, void (* handler)(struct sepia_request *));
 int  sepia_start(char *, int);
 
 int  sepia_send_status(struct sepia_request *, bstring);

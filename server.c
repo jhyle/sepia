@@ -9,9 +9,9 @@ void root(struct sepia_request * request)
 int main(char ** args)
 {
 	sepia_init();
-	sepia_mount("/test", &root);
-	sepia_mount("/test2/{var}", &root);
-	sepia_mount("/test3/{var}/test", &root);
+	sepia_mount("GET", "/test", &root);
+	sepia_mount("POST", "/test2/{var}", &root);
+	sepia_mount("GET", "/test3/{var}/test", &root);
 
 	int result = sepia_start("127.0.0.1", 8888);
 

@@ -9,6 +9,7 @@
 #include "netstring.c"
 
 struct tagbstring PATH_INFO = bsStatic("PATH_INFO");
+struct tagbstring REQUEST_METHOD = bsStatic("REQUEST_METHOD");
 struct tagbstring HTTP_STATUS_OK = bsStatic("200 OK");
 struct tagbstring HTTP_STATUS_NOT_FOUND = bsStatic("404 Not Found");
 struct tagbstring HTTP_HEADER_CONTENT_TYPE = bsStatic("Content-Type");
@@ -20,6 +21,7 @@ void sepia_init()
 }
 
 static struct sepia_mount {
+	bstring method;
 	struct bstrList * path;
 	void (* handler)(struct sepia_request *);
 } * mounts = NULL;
@@ -27,13 +29,14 @@ static struct sepia_mount {
 static size_t mount_count = 0;
 
 // not thread safe!
-void sepia_mount(char * path, void (* handler)(struct sepia_request *))
+void sepia_mount(char * method, char * path, void (* handler)(struct sepia_request *))
 {
 	size_t n = mount_count;
 
 	mount_count++;
 	mounts = GC_REALLOC(mounts, mount_count * sizeof(struct sepia_mount));
 
+	mounts[n].method = bfromcstr(method);
 	mounts[n].path = bsplit(bfromcstr(path), '/');
 	mounts[n].handler = handler;
 }
@@ -63,6 +66,7 @@ static struct sepia_request * read_request(int socket)
 				req->status = SEPIA_REQUEST_READ;
 				req->socket = socket;
 				req->headers = bsplit(&netstr, '\0');
+				req->headers->qty--;
 				req->body = bfromcstr(netstr_start + netstr_length + 1);
 				return req;
 			}
@@ -178,7 +182,7 @@ void handle_request(struct sepia_request * request)
 	if (request_path != NULL) {
 		size_t i;
 		for (i = 0; i < mount_count; i++) {
-			if (path_matches(mounts[i].path, request_path)) {
+			if (biseq(sepia_request_attribute(request, &REQUEST_METHOD), mounts[i].method) && path_matches(mounts[i].path, request_path)) {
 				mounts[i].handler(request);
 				return;
 			}

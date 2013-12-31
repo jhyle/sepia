@@ -8,21 +8,15 @@
 #include "bstrlib.h"
 #include "netstring.c"
 
-bstring PATH_INFO;
-bstring HTTP_STATUS_OK, HTTP_STATUS_NOT_FOUND;
-bstring HTTP_HEADER_CONTENT_TYPE, HTTP_HEADER_CONTENT_TYPE_TEXT_PLAIN;
+struct tagbstring PATH_INFO = bsStatic("PATH_INFO");
+struct tagbstring HTTP_STATUS_OK = bsStatic("200 OK");
+struct tagbstring HTTP_STATUS_NOT_FOUND = bsStatic("404 Not Found");
+struct tagbstring HTTP_HEADER_CONTENT_TYPE = bsStatic("Content-Type");
+struct tagbstring HTTP_HEADER_CONTENT_TYPE_TEXT_PLAIN = bsStatic("text/plain");
 
 void sepia_init()
 {
 	GC_INIT();
-
-	PATH_INFO = bfromcstr("PATH_INFO");
-
-	HTTP_STATUS_OK = bfromcstr("200 OK");
-	HTTP_STATUS_NOT_FOUND = bfromcstr("404 Not Found");
-
-	HTTP_HEADER_CONTENT_TYPE = bfromcstr("Content-Type");
-	HTTP_HEADER_CONTENT_TYPE_TEXT_PLAIN = bfromcstr("text/plain");
 }
 
 static struct sepia_mount {
@@ -62,10 +56,13 @@ static struct sepia_request * read_request(int socket)
 			char * netstr_start;
 
 			if (netstring_read(buffer, buffer_size, &netstr_start, &netstr_length) == 0) {
+				struct tagbstring netstr;
+				blk2tbstr(netstr, netstr_start, netstr_length);
+
 				struct sepia_request * req = GC_MALLOC(sizeof(struct sepia_request));
 				req->status = SEPIA_REQUEST_READ;
 				req->socket = socket;
-				req->headers = bsplit(blk2bstr(netstr_start, netstr_length), '\0');
+				req->headers = bsplit(&netstr, '\0');
 				req->body = bfromcstr(netstr_start + netstr_length + 1);
 				return req;
 			}
@@ -92,7 +89,7 @@ int sepia_send_status(struct sepia_request * request, bstring s)
 int sepia_send_header(struct sepia_request * request, bstring key, bstring value)
 {
 	if (request->status == SEPIA_REQUEST_READ) {
-		sepia_send_status(request, HTTP_STATUS_OK); 
+		sepia_send_status(request, &HTTP_STATUS_OK); 
 	}
 
 	if (request->status == SEPIA_REQUEST_HEADERS_SEND) {
@@ -110,7 +107,7 @@ int sepia_send_header(struct sepia_request * request, bstring key, bstring value
 void sepia_send_eohs(struct sepia_request * request)
 {
 	if (request->status == SEPIA_REQUEST_READ) {
-		sepia_send_status(request, HTTP_STATUS_OK);
+		sepia_send_status(request, &HTTP_STATUS_OK);
 	}
 
 	send(request->socket, "\r\n", 2, 0);
@@ -149,7 +146,7 @@ void sepia_print_request(struct sepia_request * request)
 	size_t i;
 
 	if (request->status != SEPIA_REQUEST_HEADERS_SEND) {
-		sepia_send_header(request, HTTP_HEADER_CONTENT_TYPE, HTTP_HEADER_CONTENT_TYPE_TEXT_PLAIN);
+		sepia_send_header(request, &HTTP_HEADER_CONTENT_TYPE, &HTTP_HEADER_CONTENT_TYPE_TEXT_PLAIN);
 	}
 
 	for (i = 0; i < request->headers->qty; i+= 2) {
@@ -176,7 +173,7 @@ static int path_matches(struct bstrList * mount_path, struct bstrList * request_
 
 void handle_request(struct sepia_request * request)
 {
-	struct bstrList * request_path = bsplit(sepia_request_attribute(request, PATH_INFO), '/');
+	struct bstrList * request_path = bsplit(sepia_request_attribute(request, &PATH_INFO), '/');
 
 	if (request_path != NULL) {
 		size_t i;
@@ -188,7 +185,7 @@ void handle_request(struct sepia_request * request)
 		}
 	}
 
-	sepia_send_status(request, HTTP_STATUS_NOT_FOUND);
+	sepia_send_status(request, &HTTP_STATUS_NOT_FOUND);
 	sepia_send_eohs(request);
 }
 

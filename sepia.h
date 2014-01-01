@@ -12,16 +12,30 @@
 #define SEPIA_REQUEST_STATUS_SEND  12
 #define SEPIA_REQUEST_HEADERS_SEND 13
 
+struct sepia_request;
+
+struct sepia_mount {
+	bstring method;
+	struct bstrList * path;
+	char * path_var;
+	void (* handler)(struct sepia_request *);
+}; 
+
 struct sepia_request {
 	int status;
 	int socket;
 	struct bstrList * headers;
 	bstring body;
+	struct bstrList * path;
+	struct sepia_mount * mount;
 };
 
 void sepia_init();
 void sepia_mount(char *, char *, void (* handler)(struct sepia_request *));
 int  sepia_start(char *, int);
+
+bstring sepia_request_var(struct sepia_request *, size_t);
+bstring sepia_request_attribute(struct sepia_request *, bstring);
 
 int  sepia_send_status(struct sepia_request *, bstring);
 int  sepia_send_header(struct sepia_request *, bstring, bstring);

@@ -20,13 +20,10 @@ void sepia_init()
 	GC_INIT();
 }
 
-static struct sepia_mount {
-	bstring method;
-	struct bstrList * path;
-	void (* handler)(struct sepia_request *);
-} * mounts = NULL;
-
 static size_t mount_count = 0;
+static struct sepia_mount * mounts = NULL;
+
+#define is_path_var(x) (blength(x) > 0 && * bdata(x) == '{')
 
 // not thread safe!
 void sepia_mount(char * method, char * path, void (* handler)(struct sepia_request *))
@@ -36,9 +33,45 @@ void sepia_mount(char * method, char * path, void (* handler)(struct sepia_reque
 	mount_count++;
 	mounts = GC_REALLOC(mounts, mount_count * sizeof(struct sepia_mount));
 
+	mounts[n].handler = handler;
 	mounts[n].method = bfromcstr(method);
 	mounts[n].path = bsplit(bfromcstr(path), '/');
-	mounts[n].handler = handler;
+	mounts[n].path_var = GC_MALLOC(mounts[n].path->qty * sizeof(char));
+
+	size_t i;
+	for (i = 0; i < mounts[n].path->qty; i++) {
+		mounts[n].path_var[i] = is_path_var(mounts[n].path->entry[i]);
+	}
+}
+
+bstring sepia_request_attribute(struct sepia_request * request, bstring name)
+{
+	size_t i;
+
+	for (i = 0; i < request->headers->qty; i += 2) {
+		if (biseq(request->headers->entry[i], name)) {
+			return request->headers->entry[i + 1];
+		}
+	}
+
+	return NULL;
+}
+
+bstring sepia_request_var(struct sepia_request * request, size_t n)
+{
+	size_t i, j = 0;
+
+	for (i = 0; i < request->mount->path->qty; i++) {
+		if (request->mount->path_var[i]) {
+			if (n == j) {
+				return request->path->entry[i];
+			} else {
+				j++;
+			}
+		}
+	}
+
+	return NULL;
 }
 
 #define BUFFER_SIZE 32
@@ -68,6 +101,8 @@ static struct sepia_request * read_request(int socket)
 				req->headers = bsplit(&netstr, '\0');
 				req->headers->qty--;
 				req->body = bfromcstr(netstr_start + netstr_length + 1);
+				req->path = bsplit(sepia_request_attribute(req, &PATH_INFO), '/');
+
 				return req;
 			}
 		}
@@ -132,19 +167,6 @@ void sepia_send_string(struct sepia_request * request, bstring s)
 	sepia_send_data(request, bdata(s), blength(s));
 }
 
-bstring sepia_request_attribute(struct sepia_request * request, bstring name)
-{
-	size_t i;
-
-	for (i = 0; i < request->headers->qty; i += 2) {
-		if (biseq(request->headers->entry[i], name)) {
-			return request->headers->entry[i + 1];
-		}
-	}
-
-	return NULL;
-}
-
 void sepia_print_request(struct sepia_request * request)
 {
 	size_t i;
@@ -169,7 +191,13 @@ static int path_matches(struct bstrList * mount_path, struct bstrList * request_
 
 	size_t i;
 	for (i = 0; i < mount_path->qty && i < request_path->qty; i++) {
-		if (blength(mount_path->entry[i]) > 0 && * bdata(mount_path->entry[i]) != '{' && !biseq(mount_path->entry[i], request_path->entry[i])) return 0;
+		if (blength(mount_path->entry[i]) > 0) {
+			if (* bdata(mount_path->entry[i]) == '{') {
+				// nothing to do
+			} else {
+				if (!biseq(mount_path->entry[i], request_path->entry[i])) return 0;
+			}
+		}
 	}
 
 	return 1;
@@ -177,15 +205,13 @@ static int path_matches(struct bstrList * mount_path, struct bstrList * request_
 
 void handle_request(struct sepia_request * request)
 {
-	struct bstrList * request_path = bsplit(sepia_request_attribute(request, &PATH_INFO), '/');
+	size_t i;
 
-	if (request_path != NULL) {
-		size_t i;
-		for (i = 0; i < mount_count; i++) {
-			if (biseq(sepia_request_attribute(request, &REQUEST_METHOD), mounts[i].method) && path_matches(mounts[i].path, request_path)) {
-				mounts[i].handler(request);
-				return;
-			}
+	for (i = 0; i < mount_count; i++) {
+		if (biseq(sepia_request_attribute(request, &REQUEST_METHOD), mounts[i].method) && path_matches(mounts[i].path, request->path)) {
+			request->mount = &mounts[i];
+			mounts[i].handler(request);
+			return;
 		}
 	}
 

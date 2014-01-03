@@ -3,6 +3,7 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <libbson-1.0/bson.h>
 
 #include "sepia.h"
 #include "bstrlib.h"
@@ -14,6 +15,7 @@ struct tagbstring HTTP_STATUS_OK = bsStatic("200 OK");
 struct tagbstring HTTP_STATUS_NOT_FOUND = bsStatic("404 Not Found");
 struct tagbstring HTTP_HEADER_CONTENT_TYPE = bsStatic("Content-Type");
 struct tagbstring HTTP_HEADER_CONTENT_TYPE_TEXT_PLAIN = bsStatic("text/plain");
+struct tagbstring HTTP_HEADER_CONTENT_TYPE_APPLICATION_JSON = bsStatic("application/json");
 
 void sepia_init()
 {
@@ -137,7 +139,7 @@ int sepia_send_header(struct sepia_request * request, bstring key, bstring value
 
 	send(request->socket, bdata(key), blength(key), 0);
 	send(request->socket, ": ", 2, 0);
-	send(request->socket, bdata(key), blength(value), 0);
+	send(request->socket, bdata(value), blength(value), 0);
 	send(request->socket, "\r\n", 2, 0);
 
 	return SEPIA_OK;
@@ -164,25 +166,38 @@ void sepia_send_data(struct sepia_request * request, void * data, size_t data_le
 
 void sepia_send_string(struct sepia_request * request, bstring s)
 {
+	if (request->status != SEPIA_REQUEST_HEADERS_SEND) {
+		sepia_send_header(request, &HTTP_HEADER_CONTENT_TYPE, &HTTP_HEADER_CONTENT_TYPE_TEXT_PLAIN);
+	}
+
 	sepia_send_data(request, bdata(s), blength(s));
+}
+
+void sepia_send_json(struct sepia_request * request, bson_t * b)
+{
+	size_t len;
+	char * json = bson_as_json(b, &len);
+
+	if (request->status != SEPIA_REQUEST_HEADERS_SEND) {
+		sepia_send_header(request, &HTTP_HEADER_CONTENT_TYPE, &HTTP_HEADER_CONTENT_TYPE_APPLICATION_JSON);
+	}
+
+	sepia_send_data(request, json, len);
 }
 
 void sepia_print_request(struct sepia_request * request)
 {
 	size_t i;
 
-	if (request->status != SEPIA_REQUEST_HEADERS_SEND) {
-		sepia_send_header(request, &HTTP_HEADER_CONTENT_TYPE, &HTTP_HEADER_CONTENT_TYPE_TEXT_PLAIN);
-	}
+	bson_t * b = bson_new();
 
 	for (i = 0; i < request->headers->qty; i+= 2) {
-		sepia_send_string(request, request->headers->entry[i]);
-		sepia_send_data(request, ": ", 2);
-		sepia_send_string(request, request->headers->entry[i + 1]);
-		sepia_send_data(request, "\n", 1);
+		bson_append_utf8(b,
+			bdata(request->headers->entry[i]), blength(request->headers->entry[i]),
+			bdata(request->headers->entry[i + 1]), blength(request->headers->entry[i + 1]));
 	}
 
-	sepia_send_string(request, request->body);
+	sepia_send_json(request, b);
 }
 
 static int path_matches(struct bstrList * mount_path, struct bstrList * request_path)

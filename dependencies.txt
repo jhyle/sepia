@@ -1,7 +1,8 @@
-apt-get install vim
 apt-get install libgc-dev
-apt-get install mc
 apt-get install apache2 libapache2-mod-scgi
 vim /etc/apache2/conf-available/scgi.conf
-apt-get install libjansson-dev
 http://bstring.sourceforge.net/
+apt-get install mongodb
+apt-get install libssl-dev
+https://github.com/mongodb/libbson/releases
+https://github.com/mongodb/mongo-c-driver/releases

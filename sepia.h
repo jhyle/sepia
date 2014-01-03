@@ -1,4 +1,6 @@
+#include <gc.h>
 #include "bstrlib.h"
+#include <libbson-1.0/bson.h>
 
 #define SEPIA_OK 0
 #define SEPIA_ERROR_SOCKET 1
@@ -42,5 +44,6 @@ int  sepia_send_header(struct sepia_request *, bstring, bstring);
 void sepia_send_eohs  (struct sepia_request *);
 void sepia_send_data  (struct sepia_request *, void *, size_t);
 void sepia_send_string(struct sepia_request *, bstring);
+void sepia_send_json  (struct sepia_request *, bson_t * b);
 
 void sepia_print_request(struct sepia_request *);

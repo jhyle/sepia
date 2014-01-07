@@ -1,0 +1,16 @@
+{
+  "Herausgeber": "X	ema",
+  "Nummer": "1234\t5678\t9012\t3456",
+  "Deckung": 2e+6,
+  "Währung": "\u20AC",
+  "Inhaber": {
+    "Name": "Mustermann",
+    "Vorname": "Max",
+    "m\u00E4nnlich": true,
+    "Hobbys": [ "\"Reiten\"", "Golfen", "Lesen" ],
+    "Alter": 42,
+    "Kinder": [],
+    "Partner": null
+  }
+}
+

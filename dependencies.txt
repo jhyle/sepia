@@ -6,3 +6,4 @@ apt-get install mongodb
 apt-get install libssl-dev
 https://github.com/mongodb/libbson/releases
 https://github.com/mongodb/mongo-c-driver/releases
+https://github.com/mnunberg/jsonsl

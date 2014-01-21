@@ -39,6 +39,8 @@ int  sepia_start(char *, int);
 bstring sepia_request_var(struct sepia_request *, size_t);
 bstring sepia_request_attribute(struct sepia_request *, bstring);
 
+bson_t * sepia_read_json(struct sepia_request *);
+
 int  sepia_send_status(struct sepia_request *, bstring);
 int  sepia_send_header(struct sepia_request *, bstring, bstring);
 void sepia_send_eohs  (struct sepia_request *);

@@ -6,6 +6,7 @@ void root(struct sepia_request * request)
 	sepia_print_request(request);
 	sepia_send_string(request, sepia_request_var(request, 0));
 	sepia_send_string(request, sepia_request_var(request, 1));
+	sepia_send_json(request, sepia_read_json(request));
 }
 
 int main(char ** args)

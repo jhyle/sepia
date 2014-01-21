@@ -7,6 +7,7 @@
 #include "netstring.c"
 
 struct tagbstring PATH_INFO = bsStatic("PATH_INFO");
+struct tagbstring CONTENT_LENGTH = bsStatic("CONTENT_LENGTH");
 struct tagbstring REQUEST_METHOD = bsStatic("REQUEST_METHOD");
 struct tagbstring HTTP_STATUS_OK = bsStatic("200 OK");
 struct tagbstring HTTP_STATUS_NOT_FOUND = bsStatic("404 Not Found");
@@ -73,6 +74,18 @@ bstring sepia_request_var(struct sepia_request * request, size_t n)
 	return NULL;
 }
 
+
+static int bstr2int(bstring b)
+{
+	if (b == NULL) return 0;
+	
+	size_t length = blength(b);
+	char buffer[length + 1];
+	buffer[length] = '\0';
+	memcpy(buffer, b->data, length);
+	return atoi(buffer);	
+}
+
 #define BUFFER_SIZE 32
 
 static struct sepia_request * read_request(int socket)
@@ -83,10 +96,13 @@ static struct sepia_request * read_request(int socket)
 
 	if (end_of_size != NULL) {
 		* end_of_size = '\0';
-		size_t buffer_size = atoi(buffer) + (end_of_size - buffer) + 2;
+		int buffer_size = atoi(buffer) + (end_of_size - buffer) + 2;
 		char * buffer = (char *) GC_MALLOC(buffer_size);
 
 		if (recv(socket, buffer, buffer_size, MSG_WAITALL) == buffer_size) {
+
+//			printf("%s\n", bstr2cstr(blk2bstr(buffer, buffer_size), '\n'));
+
 			size_t netstr_length;
 			char * netstr_start;
 
@@ -99,10 +115,20 @@ static struct sepia_request * read_request(int socket)
 				req->socket = socket;
 				req->headers = bsplit(&netstr, '\0');
 				req->headers->qty--;
-				req->body = bfromcstr(netstr_start + netstr_length + 1);
 				req->path = bsplit(sepia_request_attribute(req, &PATH_INFO), '/');
 
-				return req;
+				int body_size = bstr2int(sepia_request_attribute(req, &CONTENT_LENGTH));
+				if (body_size == 0) {
+					req->body = NULL;
+					return req;
+				} else {
+					req->body = GC_MALLOC(sizeof(bstring *));
+					char * body_buffer = GC_MALLOC(body_size);
+					if (recv(socket, body_buffer, body_size, MSG_WAITALL) == body_size) {
+						btfromblk(* (req->body), body_buffer, body_size);
+						return req;
+					}
+				}
 			}
 		}
 	}
@@ -172,14 +198,15 @@ void sepia_send_string(struct sepia_request * request, bstring s)
 
 void sepia_send_json(struct sepia_request * request, bson_t * b)
 {
-	size_t len;
-	char * json = bson_as_json(b, &len);
-
 	if (request->status != SEPIA_REQUEST_HEADERS_SEND) {
 		sepia_send_header(request, &HTTP_HEADER_CONTENT_TYPE, &HTTP_HEADER_CONTENT_TYPE_APPLICATION_JSON);
 	}
 
-	sepia_send_data(request, json, len);
+	if (b != NULL) {
+		size_t len;
+		char * json = bson_as_json(b, &len);
+		sepia_send_data(request, json, len);
+	}
 }
 
 void sepia_print_request(struct sepia_request * request)

@@ -290,7 +290,7 @@ int sepia_start(char * ip, int port)
 			close(sock);
 			struct sepia_request * req = read_request(conn);
 			if (req == NULL) {
-				printf("Failed to read the request!\n");
+				sepia_log(LOG_ERR, "Could not read a request.");
 			} else {
 				handle_request(req);
 			}

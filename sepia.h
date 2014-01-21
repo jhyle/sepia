@@ -1,4 +1,6 @@
 #include <gc.h>
+#include <stdarg.h>
+#include <syslog.h>
 #include "bstrlib.h"
 #include <libbson-1.0/bson.h>
 
@@ -13,6 +15,8 @@
 #define SEPIA_REQUEST_READ 11
 #define SEPIA_REQUEST_STATUS_SEND  12
 #define SEPIA_REQUEST_HEADERS_SEND 13
+
+#define sepia_log(level, ...) syslog(level, __VA_ARGS__)
 
 struct sepia_request;
 

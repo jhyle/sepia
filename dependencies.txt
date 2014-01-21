@@ -1,9 +1,13 @@
+*** Make libbson and libsepia ***
 apt-get install libgc-dev
+apt-get install automake autoconf libtool make gcc
+https://github.com/jhyle/libbson.git
+https://github.com/jhyle/sepia.git
+
+*** Install Apache ***
 apt-get install apache2 libapache2-mod-scgi
-vim /etc/apache2/conf-available/scgi.conf
+/etc/apache2/conf-available/scgi.conf
+
+*** Included in sepia source ***
 http://bstring.sourceforge.net/
-apt-get install mongodb
-apt-get install libssl-dev
-https://github.com/mongodb/libbson/releases
-https://github.com/mongodb/mongo-c-driver/releases
 https://github.com/mnunberg/jsonsl

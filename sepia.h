@@ -1,7 +1,7 @@
 #include <gc.h>
 #include <stdarg.h>
 #include <syslog.h>
-#include "bstrlib.h"
+#include <bstrlib.h>
 #include <libbson-1.0/bson.h>
 
 #define SEPIA_OK 0

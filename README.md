@@ -66,7 +66,12 @@ Then you have create the file /etc/apache2/conf-available/scgi.conf to describe 
 SCGIMount / 127.0.0.1:8888
 ```
 
-Which will forward every request (path = /) towards the example web server below.
+Which will forward every request (path = /) towards the example web server below. Then enable the configuration with:
+
+```
+sudo a2enconf scgi && sudo service apache2 restart
+```
+
 
 Example
 =======
@@ -116,4 +121,9 @@ int main(char ** args)
 	}
 }
 ```
+This should compile with:
 
+
+```
+gcc -o server server.c -lsepia -lgc -lbstr -lbson-1.0
+```

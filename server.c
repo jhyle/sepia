@@ -18,7 +18,7 @@ int main(char ** args)
 	sepia_mount("POST", "/test2/{var}", &root);
 	sepia_mount("GET", "/test3/{var}/test/{var}", &root);
 
-	int result = sepia_start("127.0.0.1", 8888);
+	int result = sepia_start(NULL, 8888);
 
 	if (result == SEPIA_ERROR_SOCKET) {
 		printf("Failed to create socket!\n");

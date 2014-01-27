@@ -278,12 +278,9 @@ void handle_request(struct sepia_request * request)
 	sepia_send_eohs(request);
 }
 
-// TODO ip == NULL -> listen on all interfaces
-// TODO logfile
 int sepia_start(char * ip, int port)
 {
 	int sock;
-	struct sockaddr_in address;
 
 	if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 1) {
 		return SEPIA_ERROR_SOCKET;
@@ -292,9 +289,14 @@ int sepia_start(char * ip, int port)
 	const int y = 1;
 	setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &y, sizeof(int));
 
+	struct sockaddr_in address;
 	address.sin_family = AF_INET;
 	address.sin_port = htons(port);
-	inet_aton(ip, &address.sin_addr);
+	if (ip == NULL) {
+		address.sin_addr.s_addr = htonl(INADDR_ANY);
+	} else {
+		inet_aton(ip, &address.sin_addr);
+	}
 	
 	if (bind(sock, (const struct sockaddr *) &address, sizeof(address)) != 0) {
 		return SEPIA_ERROR_BIND;

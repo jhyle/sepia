@@ -225,7 +225,15 @@ void sepia_send_json(struct sepia_request * request, bson_t * b)
 	if (b != NULL) {
 		size_t len;
 		char * json = bson_as_json(b, &len);
-		sepia_send_data(request, json, len);
+		if (len < 3) {
+			if (* json == '{') {
+				sepia_send_data(request, "{ }", 3);
+			} else {
+				sepia_send_data(request, "[ ]", 3);
+			}
+		} else {
+			sepia_send_data(request, json, len);
+		}
 	}
 }
 

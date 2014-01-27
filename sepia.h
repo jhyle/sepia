@@ -86,9 +86,12 @@ bstring sepia_request_attribute(struct sepia_request *, bstring name);
 bstring sepia_read_body(struct sepia_request *);
 
 /*
-  Read the body of the HTTP request as JSON. Returns NULL if unsuccessful.
+  Read the body of the HTTP request as JSON. Returns NULL if unsuccessful,
+  if there was an error and the second argument is not NULL, it will be
+  passed there. See jsonsl_error_t in jsonsl.h. If the return value is NULL
+  and there is no error, then the body was truncated somewhere.
 */
-bson_t * sepia_read_json(struct sepia_request *);
+bson_t * sepia_read_json(struct sepia_request *, int * error);
 
 /*
   Send an HTTP status. The status includes the number and the describing string.

@@ -191,7 +191,7 @@ static int on_error(jsonsl_t parser, jsonsl_error_t error, struct jsonsl_state_s
 	return 0;
 }
 
-bson_t * sepia_read_json(struct sepia_request * request)
+bson_t * sepia_read_json(struct sepia_request * request, int * error)
 {
 	jsonsl_t parser = jsonsl_new(MAX_NESTING_LEVEL);
 	jsonsl_enable_all_callbacks(parser);
@@ -208,6 +208,10 @@ bson_t * sepia_read_json(struct sepia_request * request)
 
 	jsonsl_feed(parser, bdata(body), blength(body));
 	jsonsl_destroy(parser);
+
+	if (error != NULL) {
+		* error = state.error;
+	}
 
 	return (state.cur_entry == -1 && state.error == JSONSL_ERROR_SUCCESS) ? state.entry[0].bson : NULL;
 }

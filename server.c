@@ -1,5 +1,7 @@
+#include <sepia.h>
 #include <stdio.h>
-#include "sepia.h"
+#include <bstrlib.h>
+#include <libbson-1.0/bson.h>
 
 void root(struct sepia_request * request)
 {

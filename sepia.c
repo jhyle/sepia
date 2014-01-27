@@ -20,6 +20,22 @@ void sepia_init()
 	GC_INIT();
 }
 
+struct sepia_request {
+	int status;
+	int socket;
+	struct bstrList * headers;
+	bstring body;
+	struct bstrList * path;
+	struct sepia_mount * mount;
+};
+
+struct sepia_mount {
+	bstring method;
+	struct bstrList * path;
+	char * path_var;
+	void (* handler)(struct sepia_request *);
+}; 
+
 static size_t mount_count = 0;
 static struct sepia_mount * mounts = NULL;
 
@@ -74,6 +90,10 @@ bstring sepia_request_var(struct sepia_request * request, size_t n)
 	return NULL;
 }
 
+bstring sepia_read_body(struct sepia_request * request)
+{
+	return request->body;
+}
 
 static int bstr2int(bstring b)
 {

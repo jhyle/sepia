@@ -198,14 +198,15 @@ bson_t * sepia_read_json(struct sepia_request * request)
 	parser->action_callback = on_stack_change;
 	parser->error_callback = on_error;
 
+	bstring body = sepia_read_body(request);
 	struct bson_state state;
 	state.cur_entry = -1;
 	state.error = JSONSL_ERROR_SUCCESS;
 	state.entry[0].bson = NULL;
-	state.text = bdata(request->body);
+	state.text = bdata(body);
 	parser->data = &state;
 
-	jsonsl_feed(parser, bdata(request->body), blength(request->body));
+	jsonsl_feed(parser, bdata(body), blength(body));
 	jsonsl_destroy(parser);
 
 	return (state.cur_entry == -1 && state.error == JSONSL_ERROR_SUCCESS) ? state.entry[0].bson : NULL;

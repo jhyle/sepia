@@ -22,26 +22,31 @@ How to build
 To build sepia you have to install libgc and make libbstr and libbson. Note that you must take the support libs from my repo as they are slightly modified to support libgc. The following steps are sufficient on an Ubuntu based system:
 
 ```
-sudo apt-get install libgc-dev automake autoconf libtool make gcc
+sudo apt-get install libgc-dev automake autoconf libtool make gcc git
 
-git clone https://github.com/jhyle/libbstr.git
-cd libbstr
+git clone https://github.com/jhyle/bstrlib.git
+cd bstrlib
 autoreconf --install
 ./configure
 make
 sudo make install
+cd ..
 
 git clone https://github.com/jhyle/libbson.git
+cd libbson
 autoreconf --install
 ./configure --enable-libgc
 make
 sudo make install
+cd ..
 
 git clone https://github.com/jhyle/sepia.git
+cd sepia
 autoreconf --install
 ./configure
 make
 sudo make install
+cd ..
 
 sudo ldconfig
 ```

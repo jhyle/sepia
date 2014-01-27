@@ -95,6 +95,15 @@ bstring sepia_read_body(struct sepia_request * request)
 	return request->body;
 }
 
+struct sepia_request * sepia_fake_request(void * body, size_t body_len)
+{
+	struct sepia_request * req = GC_MALLOC(sizeof(struct sepia_request));
+	memset(req, 0, sizeof(struct sepia_request));
+	req->status = SEPIA_REQUEST_READ;
+	req->body = blk2bstr(body, body_len);
+	return req;
+}
+
 static int bstr2int(bstring b)
 {
 	if (b == NULL) return 0;

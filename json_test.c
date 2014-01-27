@@ -17,9 +17,8 @@ int main(int argc, char ** args)
 	}
 
 	read = fread(buffer, 1, 1024, file);
-	struct sepia_request request;
-	request.body = blk2bstr(buffer, read);
-	printf("%s\n", bson_as_json(sepia_read_json(&request), NULL));
+	struct sepia_request * request = sepia_fake_request(buffer, read);
+	printf("%s\n", bson_as_json(sepia_read_json(request, NULL), NULL));
 
 	fclose(file);
 }

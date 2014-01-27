@@ -129,3 +129,8 @@ void sepia_send_json  (struct sepia_request *, bson_t * b);
   Send all request and path vars as JSON object.
 */
 void sepia_print_request(struct sepia_request *);
+
+/*
+ Create a fake request for testing purposes.
+*/
+struct sepia_request * sepia_fake_request(void * body, size_t body_len);

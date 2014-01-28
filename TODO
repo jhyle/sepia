@@ -1,0 +1,4 @@
+read body, attributes and querystring only if needed
+offer query string parsing
+offer body length from attributes, read it directly from the stream without parsing attributes
+add "made for performance / low memory usage" to README

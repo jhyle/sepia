@@ -7,6 +7,8 @@
 #include "netstring.c"
 
 struct tagbstring PATH_INFO = bsStatic("PATH_INFO");
+struct tagbstring QUERY_STRING = bsStatic("QUERY_STRING");
+struct tagbstring QUERY_STRING_SPLIT_CHAR = bsStatic("&=");
 struct tagbstring CONTENT_LENGTH = bsStatic("CONTENT_LENGTH");
 struct tagbstring REQUEST_METHOD = bsStatic("REQUEST_METHOD");
 struct tagbstring HTTP_STATUS_OK = bsStatic("200 OK");
@@ -24,8 +26,10 @@ struct sepia_request {
 	int status;
 	int socket;
 	struct bstrList * headers;
+	int body_length;
 	bstring body;
 	struct bstrList * path;
+	struct bstrList * query;
 	struct sepia_mount * mount;
 };
 
@@ -60,7 +64,7 @@ void sepia_mount(char * method, char * path, void (* handler)(struct sepia_reque
 	}
 }
 
-bstring sepia_request_attribute(struct sepia_request * request, bstring name)
+bstring sepia_request_attribute(struct sepia_request * request, const_bstring name)
 {
 	size_t i;
 
@@ -73,7 +77,7 @@ bstring sepia_request_attribute(struct sepia_request * request, bstring name)
 	return NULL;
 }
 
-bstring sepia_request_var(struct sepia_request * request, size_t n)
+bstring sepia_path_var(struct sepia_request * request, size_t n)
 {
 	size_t i, j = 0;
 
@@ -90,7 +94,25 @@ bstring sepia_request_var(struct sepia_request * request, size_t n)
 	return NULL;
 }
 
-bstring sepia_read_body(struct sepia_request * request)
+bstring sepia_query_var(struct sepia_request * request, const_bstring name)
+{
+	size_t i;
+
+	for (i = 0; i < request->query->qty; i += 2) {
+		if (biseq(request->query->entry[i], name)) {
+			return request->query->entry[i + 1];
+		}
+	}
+
+	return NULL;
+}
+
+int sepia_data_size(struct sepia_request * request)
+{
+	return request->body_length;
+}
+
+bstring sepia_read_string(struct sepia_request * request)
 {
 	return request->body;
 }
@@ -145,16 +167,17 @@ static struct sepia_request * read_request(int socket)
 				req->headers = bsplit(&netstr, '\0');
 				req->headers->qty--;
 				req->path = bsplit(sepia_request_attribute(req, &PATH_INFO), '/');
+				req->query = bsplits(sepia_request_attribute(req, &QUERY_STRING), &QUERY_STRING_SPLIT_CHAR);
 
-				int body_size = bstr2int(sepia_request_attribute(req, &CONTENT_LENGTH));
-				if (body_size == 0) {
+				req->body_length = bstr2int(sepia_request_attribute(req, &CONTENT_LENGTH));
+				if (req->body_length == 0) {
 					req->body = NULL;
 					return req;
 				} else {
 					req->body = GC_MALLOC(sizeof(bstring *));
-					char * body_buffer = GC_MALLOC(body_size);
-					if (recv(socket, body_buffer, body_size, MSG_WAITALL) == body_size) {
-						btfromblk(* (req->body), body_buffer, body_size);
+					char * body_buffer = GC_MALLOC(req->body_length);
+					if (recv(socket, body_buffer, req->body_length, MSG_WAITALL) == req->body_length) {
+						btfromblk(* (req->body), body_buffer, req->body_length);
 						return req;
 					}
 				}
@@ -165,7 +188,7 @@ static struct sepia_request * read_request(int socket)
 	return NULL;
 }
 
-int sepia_send_status(struct sepia_request * request, bstring s)
+int sepia_send_status(struct sepia_request * request, const_bstring s)
 {
 	if (request->status != SEPIA_REQUEST_READ) {
 		return SEPIA_ERROR_STATUS_ALREADY_SEND;
@@ -179,7 +202,7 @@ int sepia_send_status(struct sepia_request * request, bstring s)
 	return SEPIA_OK;
 }
 
-int sepia_send_header(struct sepia_request * request, bstring key, bstring value)
+int sepia_send_header(struct sepia_request * request, const_bstring key, const_bstring value)
 {
 	if (request->status == SEPIA_REQUEST_READ) {
 		sepia_send_status(request, &HTTP_STATUS_OK); 
@@ -216,7 +239,7 @@ void sepia_send_data(struct sepia_request * request, void * data, size_t data_le
 	send(request->socket, data, data_len, 0);
 }
 
-void sepia_send_string(struct sepia_request * request, bstring s)
+void sepia_send_string(struct sepia_request * request, const_bstring s)
 {
 	if (request->status != SEPIA_REQUEST_HEADERS_SEND) {
 		sepia_send_header(request, &HTTP_HEADER_CONTENT_TYPE, &HTTP_HEADER_CONTENT_TYPE_TEXT_PLAIN);

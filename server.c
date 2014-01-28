@@ -6,15 +6,17 @@
 void root(struct sepia_request * request)
 {
 	sepia_print_request(request);
-	sepia_send_string(request, sepia_request_var(request, 0));
-	sepia_send_string(request, sepia_request_var(request, 1));
+	sepia_send_string(request, sepia_path_var(request, 0));
+	sepia_send_string(request, sepia_query_var(request, bfromcstr("query")));
 
-	int error;
-	bson_t * input = sepia_read_json(request, &error);
-	if (input == NULL) {
-		sepia_send_string(request, bformat("Could not parse JSON body, error %d!\n", error));
-	} else {
-		sepia_send_json(request, input);
+	if (sepia_data_size(request) > 0) {
+		int error;
+		bson_t * input = sepia_read_json(request, &error);
+		if (input == NULL) {
+			sepia_send_string(request, bformat("Could not parse JSON body, error %d!\n", error));
+		} else {
+			sepia_send_json(request, input);
+		}
 	}
 }
 

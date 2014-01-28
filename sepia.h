@@ -73,17 +73,27 @@ int  sepia_start(char * ip, int port);
 /*
   Retrieve the value of the n'th path var. Return NULL if not exists.
 */
-bstring sepia_request_var(struct sepia_request *, size_t n);
+bstring sepia_path_var(struct sepia_request *, size_t n);
+
+/*
+  Retrieve the value of a query string parameter by name.
+*/
+bstring sepia_query_var(struct sepia_request *, const_bstring name);
 
 /*
   Retrieve the value of a request attribute by name. See sepia_print_request().
 */
-bstring sepia_request_attribute(struct sepia_request *, bstring name);
+bstring sepia_request_attribute(struct sepia_request *, const_bstring name);
+
+/*
+  Returns the size of the posted data as declared in CONTENT_LENGTH attribute.
+*/
+int sepia_data_size(struct sepia_request * request);
 
 /*
   Read the body of an HTTP request as string.
 */
-bstring sepia_read_body(struct sepia_request *);
+bstring sepia_read_string(struct sepia_request *);
 
 /*
   Read the body of the HTTP request as JSON. Returns NULL if unsuccessful,
@@ -97,12 +107,12 @@ bson_t * sepia_read_json(struct sepia_request *, int * error);
   Send an HTTP status. The status includes the number and the describing string.
   You can call this method only ones, it is omitable if the status is "200 OK".
 */
-int  sepia_send_status(struct sepia_request *, bstring status);
+int  sepia_send_status(struct sepia_request *, const_bstring status);
 
 /*
   Send an HTTP header. Not possible after sepia_send_eohs(), _data, _string and _json.
 */
-int  sepia_send_header(struct sepia_request *, bstring name, bstring value);
+int  sepia_send_header(struct sepia_request *, const_bstring name, const_bstring value);
 
 /*
   Send end-of-headers signature (actuall \r\n). You cannot send a header after this.
@@ -118,7 +128,7 @@ void sepia_send_data  (struct sepia_request *, void *, size_t);
 /*
   Send string data.
 */
-void sepia_send_string(struct sepia_request *, bstring);
+void sepia_send_string(struct sepia_request *, const_bstring);
 
 /*
   Send JSON.

@@ -73,33 +73,51 @@ int  sepia_start(char * ip, int port);
 /*
   Retrieve the value of the n'th path var. Return NULL if not exists.
 */
-bstring sepia_path_var(struct sepia_request *, size_t n);
+const_bstring sepia_path_var(struct sepia_request *, size_t n);
 
 /*
   Retrieve the value of a query string parameter by name.
 */
-bstring sepia_query_var(struct sepia_request *, const_bstring name);
+const_bstring sepia_query_param(struct sepia_request *, const_bstring name);
 
 /*
   Retrieve the value of a request attribute by name. See sepia_print_request().
 */
-bstring sepia_request_attribute(struct sepia_request *, const_bstring name);
+const_bstring sepia_request_attribute(struct sepia_request *, const_bstring name);
+
+/*
+  Return the HTTP method of the request.
+*/
+const_bstring sepia_request_method(struct sepia_request *);
 
 /*
   Returns the size of the posted data as declared in CONTENT_LENGTH attribute.
 */
-int sepia_data_size(struct sepia_request * request);
+int  sepia_data_size(struct sepia_request *);
+
+/*
+  Read the next buffer_size bytes of the HTTP body into the given buffer.
+  Returns the number of bytes actual received, a negative number for an error
+  and zero if there is no more data.
+
+  Note that you should only use one of the _read_ methods.
+*/
+int  sepia_read_chunk(struct sepia_request *, void * buffer, size_t buffer_size);
 
 /*
   Read the body of an HTTP request as string.
+
+  Note that you should only use one of the _read_ methods.
 */
-bstring sepia_read_string(struct sepia_request *);
+const_bstring sepia_read_string(struct sepia_request *);
 
 /*
   Read the body of the HTTP request as JSON. Returns NULL if unsuccessful,
   if there was an error and the second argument is not NULL, it will be
   passed there. See jsonsl_error_t in jsonsl.h. If the return value is NULL
   and there is no error, then the body was truncated somewhere.
+
+  Note that you should only use one of the _read_ methods.
 */
 bson_t * sepia_read_json(struct sepia_request *, int * error);
 

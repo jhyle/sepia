@@ -191,6 +191,8 @@ static int on_error(jsonsl_t parser, jsonsl_error_t error, struct jsonsl_state_s
 	return 0;
 }
 
+#define BUFFER_SIZE 1024
+
 bson_t * sepia_read_json(struct sepia_request * request, int * error)
 {
 	jsonsl_t parser = jsonsl_new(MAX_NESTING_LEVEL);
@@ -198,20 +200,26 @@ bson_t * sepia_read_json(struct sepia_request * request, int * error)
 	parser->action_callback = on_stack_change;
 	parser->error_callback = on_error;
 
-	bstring body = sepia_read_string(request);
+	char * buffer = GC_MALLOC(BUFFER_SIZE);
+
 	struct bson_state state;
 	state.cur_entry = -1;
 	state.error = JSONSL_ERROR_SUCCESS;
 	state.entry[0].bson = NULL;
-	state.text = bdata(body);
+	state.text = buffer;
 	parser->data = &state;
 
-	jsonsl_feed(parser, bdata(body), blength(body));
-	jsonsl_destroy(parser);
+	int read;
+	do {
+		read = sepia_read_chunk(request, buffer, BUFFER_SIZE);
+		jsonsl_feed(parser, buffer, read);
+	} while (read > 0);
 
 	if (error != NULL) {
 		* error = state.error;
 	}
+
+	jsonsl_destroy(parser);
 
 	return (state.cur_entry == -1 && state.error == JSONSL_ERROR_SUCCESS) ? state.entry[0].bson : NULL;
 }

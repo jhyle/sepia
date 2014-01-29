@@ -1,4 +1,2 @@
-read body, attributes and querystring only if needed
-offer query string parsing
-offer body length from attributes, read it directly from the stream without parsing attributes
+offer string to bson and bson to string conversion
 add "made for performance / low memory usage" to README

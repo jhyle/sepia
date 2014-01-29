@@ -25,16 +25,21 @@ void sepia_init()
 struct sepia_request {
 	int status;
 	int socket;
-	struct bstrList * headers;
-	int body_length;
-	bstring body;
-	struct bstrList * path;
-	struct bstrList * query;
 	struct sepia_mount * mount;
+
+	struct bstrList * path;
+	struct bstrList * headers;
+
+	const_bstring query_string;
+	struct bstrList * query_params;
+
+	bstring body;
+	int body_length;
+	int received_body_length;
 };
 
 struct sepia_mount {
-	bstring method;
+	const_bstring method;
 	struct bstrList * path;
 	char * path_var;
 	void (* handler)(struct sepia_request *);
@@ -64,7 +69,7 @@ void sepia_mount(char * method, char * path, void (* handler)(struct sepia_reque
 	}
 }
 
-bstring sepia_request_attribute(struct sepia_request * request, const_bstring name)
+const_bstring sepia_request_attribute(struct sepia_request * request, const_bstring name)
 {
 	size_t i;
 
@@ -77,7 +82,16 @@ bstring sepia_request_attribute(struct sepia_request * request, const_bstring na
 	return NULL;
 }
 
-bstring sepia_path_var(struct sepia_request * request, size_t n)
+const_bstring sepia_request_method(struct sepia_request * request)
+{
+	if (request->mount == NULL) {
+		return NULL;
+	} else {
+		return request->mount->method;
+	}
+}
+
+const_bstring sepia_path_var(struct sepia_request * request, size_t n)
 {
 	size_t i, j = 0;
 
@@ -94,13 +108,18 @@ bstring sepia_path_var(struct sepia_request * request, size_t n)
 	return NULL;
 }
 
-bstring sepia_query_var(struct sepia_request * request, const_bstring name)
+const_bstring sepia_query_param(struct sepia_request * request, const_bstring name)
 {
 	size_t i;
+	
+	if (request->query_params == NULL) {
+		request->query_params = bsplits(request->query_string, &QUERY_STRING_SPLIT_CHAR);
+		request->query_string = NULL;
+	}
 
-	for (i = 0; i < request->query->qty; i += 2) {
-		if (biseq(request->query->entry[i], name)) {
-			return request->query->entry[i + 1];
+	for (i = 0; i < request->query_params->qty; i += 2) {
+		if (biseq(request->query_params->entry[i], name)) {
+			return request->query_params->entry[i + 1];
 		}
 	}
 
@@ -112,8 +131,48 @@ int sepia_data_size(struct sepia_request * request)
 	return request->body_length;
 }
 
-bstring sepia_read_string(struct sepia_request * request)
+int sepia_read_chunk(struct sepia_request * request, void * buffer, size_t buffer_size)
 {
+	if (request->received_body_length == request->body_length) {
+		return 0;
+	}
+
+	int read = recv(request->socket, buffer, buffer_size, 0);
+	request->received_body_length += read;
+	return read;
+}
+
+#define SKIP_BUFFER_SIZE 1024
+
+void sepia_skip_data(struct sepia_request * request)
+{
+	int read;
+	static char buffer[SKIP_BUFFER_SIZE];
+
+	do {
+		read = sepia_read_chunk(request, buffer, SKIP_BUFFER_SIZE);
+	} while (read > 0);
+}
+
+const_bstring sepia_read_string(struct sepia_request * request)
+{
+	if (request->body != NULL) {
+		return request->body;
+	}
+
+	int length = sepia_data_size(request) - request->received_body_length;
+
+	if (length > 0) {
+		request->body = GC_MALLOC(sizeof(struct tagbstring));
+		char * buffer = GC_MALLOC(length);
+		if (recv(request->socket, buffer, length, MSG_WAITALL) == length) {
+			btfromblk(* (request->body), buffer, length);
+			request->received_body_length += length;
+		} else {
+			request->body = NULL;
+		}
+	}
+
 	return request->body;
 }
 
@@ -126,7 +185,7 @@ struct sepia_request * sepia_fake_request(void * body, size_t body_len)
 	return req;
 }
 
-static int bstr2int(bstring b)
+static int bstr2int(const_bstring b)
 {
 	if (b == NULL) return 0;
 	
@@ -167,20 +226,13 @@ static struct sepia_request * read_request(int socket)
 				req->headers = bsplit(&netstr, '\0');
 				req->headers->qty--;
 				req->path = bsplit(sepia_request_attribute(req, &PATH_INFO), '/');
-				req->query = bsplits(sepia_request_attribute(req, &QUERY_STRING), &QUERY_STRING_SPLIT_CHAR);
-
+				req->query_params = NULL;
+				req->query_string = sepia_request_attribute(req, &QUERY_STRING);
+				req->body = NULL;
 				req->body_length = bstr2int(sepia_request_attribute(req, &CONTENT_LENGTH));
-				if (req->body_length == 0) {
-					req->body = NULL;
-					return req;
-				} else {
-					req->body = GC_MALLOC(sizeof(bstring *));
-					char * body_buffer = GC_MALLOC(req->body_length);
-					if (recv(socket, body_buffer, req->body_length, MSG_WAITALL) == req->body_length) {
-						btfromblk(* (req->body), body_buffer, req->body_length);
-						return req;
-					}
-				}
+				req->received_body_length = 0;
+
+				return req;
 			}
 		}
 	}
@@ -192,6 +244,10 @@ int sepia_send_status(struct sepia_request * request, const_bstring s)
 {
 	if (request->status != SEPIA_REQUEST_READ) {
 		return SEPIA_ERROR_STATUS_ALREADY_SEND;
+	}
+
+	if (sepia_data_size(request) > 0) {
+		sepia_skip_data(request);
 	}
 
 	send(request->socket, "Status: ", 8, 0);
@@ -310,6 +366,13 @@ void handle_request(struct sepia_request * request)
 		if (biseq(sepia_request_attribute(request, &REQUEST_METHOD), mounts[i].method) && path_matches(mounts[i].path, request->path)) {
 			request->mount = &mounts[i];
 			mounts[i].handler(request);
+
+			if (request->status == SEPIA_REQUEST_READ) {
+				sepia_send_status(request, &HTTP_STATUS_OK);
+			}
+			if (request->status == SEPIA_REQUEST_STATUS_SEND) {
+				sepia_send_eohs(request);
+			}
 			return;
 		}
 	}

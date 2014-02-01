@@ -137,7 +137,18 @@ int sepia_read_chunk(struct sepia_request * request, void * buffer, size_t buffe
 		return 0;
 	}
 
-	int read = recv(request->socket, buffer, buffer_size, 0);
+	int read;
+
+	if (request->socket > 0) {
+		read = recv(request->socket, buffer, buffer_size, 0);
+	} else {
+		read = request->body_length - request->received_body_length;
+		if (read > buffer_size) {
+			read = buffer_size;
+		}
+		memcpy(buffer, bdata(request->body) + request->received_body_length, read);
+	}
+
 	request->received_body_length += read;
 	return read;
 }
@@ -180,8 +191,10 @@ struct sepia_request * sepia_fake_request(void * body, size_t body_len)
 {
 	struct sepia_request * req = GC_MALLOC(sizeof(struct sepia_request));
 	memset(req, 0, sizeof(struct sepia_request));
+	req->socket = -1;
 	req->status = SEPIA_REQUEST_READ;
 	req->body = blk2bstr(body, body_len);
+	req->body_length = body_len;
 	return req;
 }
 

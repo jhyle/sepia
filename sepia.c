@@ -131,7 +131,7 @@ int sepia_data_size(struct sepia_request * request)
 	return request->body_length;
 }
 
-int sepia_read_chunk(struct sepia_request * request, void * buffer, size_t buffer_size)
+int sepia_read_data(struct sepia_request * request, void * buffer, size_t buffer_size)
 {
 	if (request->received_body_length == request->body_length) {
 		return 0;
@@ -161,7 +161,7 @@ void sepia_skip_data(struct sepia_request * request)
 	static char buffer[SKIP_BUFFER_SIZE];
 
 	do {
-		read = sepia_read_chunk(request, buffer, SKIP_BUFFER_SIZE);
+		read = sepia_read_data(request, buffer, SKIP_BUFFER_SIZE);
 	} while (read > 0);
 }
 

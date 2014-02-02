@@ -102,7 +102,7 @@ int  sepia_data_size(struct sepia_request *);
 
   Note that you should only use one of the _read_ methods.
 */
-int  sepia_read_chunk(struct sepia_request *, void * buffer, size_t buffer_size);
+int  sepia_read_data(struct sepia_request *, void * buffer, size_t buffer_size);
 
 /*
   Read the body of an HTTP request as string.

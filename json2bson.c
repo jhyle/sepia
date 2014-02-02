@@ -211,7 +211,7 @@ bson_t * sepia_read_json(struct sepia_request * request, int * error)
 
 	int read;
 	do {
-		read = sepia_read_chunk(request, buffer, BUFFER_SIZE);
+		read = sepia_read_data(request, buffer, BUFFER_SIZE);
 		jsonsl_feed(parser, buffer, read);
 	} while (read > 0);
 

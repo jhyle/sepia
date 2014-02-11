@@ -15,7 +15,6 @@ struct tagbstring HTTP_STATUS_OK = bsStatic("200 OK");
 struct tagbstring HTTP_STATUS_NOT_FOUND = bsStatic("404 Not Found");
 struct tagbstring HTTP_HEADER_CONTENT_TYPE = bsStatic("Content-Type");
 struct tagbstring HTTP_HEADER_CONTENT_TYPE_TEXT_PLAIN = bsStatic("text/plain");
-struct tagbstring HTTP_HEADER_CONTENT_TYPE_APPLICATION_JSON = bsStatic("application/json");
 
 void sepia_init()
 {
@@ -67,6 +66,11 @@ void sepia_mount(char * method, char * path, void (* handler)(struct sepia_reque
 	for (i = 0; i < mounts[n].path->qty; i++) {
 		mounts[n].path_var[i] = is_path_var(mounts[n].path->entry[i]);
 	}
+}
+
+int sepia_request_status(struct sepia_request * request)
+{
+	return request->status;
 }
 
 const_bstring sepia_request_attribute(struct sepia_request * request, const_bstring name)
@@ -300,7 +304,7 @@ void sepia_send_eohs(struct sepia_request * request)
 	request->status = SEPIA_REQUEST_HEADERS_SEND;
 }
 
-void sepia_send_data(struct sepia_request * request, void * data, size_t data_len)
+void sepia_send_data(struct sepia_request * request, const void * data, size_t data_len)
 {
 	if (request->status != SEPIA_REQUEST_HEADERS_SEND) {
 		sepia_send_eohs(request);
@@ -315,27 +319,6 @@ void sepia_send_string(struct sepia_request * request, const_bstring s)
 	}
 
 	sepia_send_data(request, bdata(s), blength(s));
-}
-
-void sepia_send_json(struct sepia_request * request, bson_t * b)
-{
-	if (request->status != SEPIA_REQUEST_HEADERS_SEND) {
-		sepia_send_header(request, &HTTP_HEADER_CONTENT_TYPE, &HTTP_HEADER_CONTENT_TYPE_APPLICATION_JSON);
-	}
-
-	if (b != NULL) {
-		size_t len;
-		char * json = bson_as_json(b, &len);
-		if (len < 3) {
-			if (* json == '{') {
-				sepia_send_data(request, "{ }", 3);
-			} else {
-				sepia_send_data(request, "[ ]", 3);
-			}
-		} else {
-			sepia_send_data(request, json, len);
-		}
-	}
 }
 
 void sepia_print_request(struct sepia_request * request)

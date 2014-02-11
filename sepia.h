@@ -18,12 +18,12 @@
 */
 #define SEPIA_ERROR_STATUS_ALREADY_SEND  4
 /*
-	The error return value of sepia_send_header().
+  The error return value of sepia_send_header().
 */
 #define SEPIA_ERROR_HEADERS_ALREADY_SEND 5
 
 /*
-  All states of sepia_request.status.
+  Return values of sepia_request_status().
 */
 #define SEPIA_REQUEST_INIT 10
 #define SEPIA_REQUEST_READ 11
@@ -79,6 +79,11 @@ const_bstring sepia_path_var(struct sepia_request *, size_t n);
   Retrieve the value of a query string parameter by name.
 */
 const_bstring sepia_query_param(struct sepia_request *, const_bstring name);
+
+/*
+  Retrieve the status of the request handling.
+*/
+int  sepia_request_status(struct sepia_request *);
 
 /*
   Retrieve the value of a request attribute by name. See sepia_print_request().
@@ -141,7 +146,7 @@ void sepia_send_eohs  (struct sepia_request *);
 /*
   Send raw body data described by pointer and size.
 */
-void sepia_send_data  (struct sepia_request *, void *, size_t);
+void sepia_send_data  (struct sepia_request *, const void *, size_t);
 
 /*
   Send string data.
@@ -162,3 +167,4 @@ void sepia_print_request(struct sepia_request *);
  Create a fake request for testing purposes.
 */
 struct sepia_request * sepia_fake_request(void * body, size_t body_len);
+

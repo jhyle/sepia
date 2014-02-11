@@ -1,3 +1,2 @@
-stream JSON directly in sepia_send_json, dont use bson_as_json
 offer string to bson and bson to string conversion
 add "made for performance / low memory usage" to README
